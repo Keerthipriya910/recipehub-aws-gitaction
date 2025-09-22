@@ -15,19 +15,19 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
 
-      # Step 2: Debug - list files in repo
+      # Step 2: Debug - list repo files
       - name: List repo files
         run: ls -R
 
-      # Step 3: Copy files to EC2 inside ~/ecommercefullstack
+      # Step 3: Copy files to EC2 inside ~/foodrecipe
       - name: Copy repo to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ubuntu   # use "ubuntu" for Ubuntu AMI
+          username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "."
-          target: /home/ubuntu/ecommercefullstack
+          source: "."                     # copy entire repo
+          target: /home/ubuntu/foodrecipe # deploy inside ~/foodrecipe
           overwrite: true
           debug: true
 
@@ -41,7 +41,8 @@ jobs:
           script_stop: true
           debug: true
           script: |
-            cd ~/ecommercefullstack
+            # Go to project folder
+            cd ~/foodrecipe
 
             # Install Git if missing
             if ! command -v git &> /dev/null; then
@@ -64,9 +65,12 @@ jobs:
               sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
               sudo systemctl enable docker
               sudo systemctl start docker
-              sudo usermod -aG docker $USER
+              sudo usermod -aG docker ubuntu
             fi
 
-            # Stop old containers, rebuild, and restart
+            # Stop old containers (ignore errors if none), rebuild, and restart
             sudo docker compose down || true
             sudo docker compose up -d --build
+
+            # Show running containers for debugging
+            sudo docker ps -a
