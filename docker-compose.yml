@@ -1,0 +1,52 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: foodreceipe-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: projectt
+      MYSQL_ROOT_PASSWORD: keerthi
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - foodreceipe-net
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: foodreceipe-backend
+    restart: always
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/projectt
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: keerthi
+    depends_on:
+      - db
+    ports:
+      - "8082:8082"
+    networks:
+      - foodreceipe-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: foodreceipe-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - foodreceipe-net
+
+# 👇 These must be at the bottom
+volumes:
+  db_data:
+
+networks:
+  foodreceipe-net:
+    driver: bridge
