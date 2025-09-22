@@ -22,22 +22,26 @@ jobs:
       # Step 3: Test SSH connection (fail early if unreachable)
       - name: Test SSH connection
         run: |
-          echo "${{ secrets.EC2_SSH_KEY }}" > private_key.pem
-          chmod 600 private_key.pem
+          echo "${{ secrets.EC2_SSH_KEY }}" > recipehub1.pem
+          chmod 600 recipehub1.pem
           echo ">>> Testing SSH connection to ${{ secrets.EC2_HOST }} ..."
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@${{ secrets.EC2_HOST }} "echo ✅ SSH connection successful"
+          ssh -o StrictHostKeyChecking=no -i recipehub1.pem ubuntu@${{ secrets.EC2_HOST }} "echo ✅ SSH connection successful"
+          rm -f recipehub1.pem   # cleanup key so it won't be copied
 
-      # Step 4: Copy repo to EC2
+      # Step 4: Copy repo to EC2 (exclude PEM key)
       - name: Copy repo to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "."                     # copy everything
-          target: /home/ubuntu/foodrecipe # folder on EC2
+          source: "."                     
+          target: /home/ubuntu/foodrecipe 
           overwrite: true
           debug: true
+          rm: true
+          strip_components: 0
+          ignore: "recipehub1.pem"
 
       # Step 5: SSH into EC2 and deploy with Docker Compose
       - name: Deploy on EC2 with Docker Compose
