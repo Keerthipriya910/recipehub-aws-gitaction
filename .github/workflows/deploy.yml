@@ -11,46 +11,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repo
+      # Checkout repo
       - name: Checkout Repo
         uses: actions/checkout@v3
 
-      # Step 2: Log in to Docker Hub
+      # Login to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      # Step 3: Build & Push Backend Image
+      # Build & Push Backend Image
       - name: Build & Push Backend
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/food-backend:latest -f Dockerfile.backend .
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/food-backend:latest
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/foodrecipe-backend:latest -f Dockerfile.backend .
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/foodrecipe-backend:latest
 
-      # Step 4: Build & Push Frontend Image
+      # Build & Push Frontend Image
       - name: Build & Push Frontend
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/food-frontend:latest -f Dockerfile.frontend .
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/food-frontend:latest
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/foodrecipe-frontend:latest -f Dockerfile.frontend .
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/foodrecipe-frontend:latest
 
-      # Step 5: Deploy on EC2 with Docker Compose
-      - name: Deploy on EC2
+      # Deploy on EC2 (no build, just pull)
+      - name: Deploy on EC2 with Docker Compose
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script_stop: true
-          command_timeout: 30m
           script: |
-            set -e
-            echo ">>> Switching to project directory..."
-            mkdir -p ~/foodrecipe
             cd ~/foodrecipe
 
-            echo ">>> Updating Docker & Docker Compose..."
+            # Install Docker if missing
             if ! command -v docker &> /dev/null; then
+              echo ">>> Installing Docker..."
               sudo apt-get update -y
               sudo apt-get install -y ca-certificates curl gnupg lsb-release
               sudo mkdir -p /etc/apt/keyrings
@@ -65,26 +62,9 @@ jobs:
               sudo usermod -aG docker ubuntu
             fi
 
-            echo ">>> Writing docker-compose.yml..."
-            cat > docker-compose.yml <<'EOF'
-            version: '3.8'
-            services:
-              backend:
-                image: ${{ secrets.DOCKERHUB_USERNAME }}/food-backend:latest
-                container_name: food-backend
-                restart: always
-                ports:
-                  - "8080:8080"
-              frontend:
-                image: ${{ secrets.DOCKERHUB_USERNAME }}/food-frontend:latest
-                container_name: food-frontend
-                restart: always
-                ports:
-                  - "80:80"
-            EOF
-
-            echo ">>> Deploying with Docker Compose..."
+            echo ">>> Pulling latest images..."
             sudo docker compose pull
+            echo ">>> Restarting containers..."
             sudo docker compose up -d
 
             echo ">>> Running containers:"
