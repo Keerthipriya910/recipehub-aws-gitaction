@@ -1,7 +1,7 @@
 services:
   db:
     image: mysql:8.0
-    container_name: foodrecipe-db
+    container_name: foodreceipe-db
     restart: always
     environment:
       MYSQL_DATABASE: projectt
@@ -11,11 +11,13 @@ services:
     volumes:
       - db_data:/var/lib/mysql
     networks:
-      - foodrecipe-net
+      - foodreceipe-net
 
   backend:
-    image: your-dockerhub-username/foodrecipe-backend:latest   # ✅ Prebuilt image
-    container_name: foodrecipe-backend
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: foodreceipe-backend
     restart: always
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/projectt
@@ -26,22 +28,25 @@ services:
     ports:
       - "8082:8082"
     networks:
-      - foodrecipe-net
+      - foodreceipe-net
 
   frontend:
-    image: your-dockerhub-username/foodrecipe-frontend:latest  # ✅ Prebuilt image
-    container_name: foodrecipe-frontend
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: foodreceipe-frontend
     restart: always
     ports:
       - "80:80"
     depends_on:
       - backend
     networks:
-      - foodrecipe-net
+      - foodreceipe-net
 
+# 👇 These must be at the bottom
 volumes:
   db_data:
 
 networks:
-  foodrecipe-net:
+  foodreceipe-net:
     driver: bridge
