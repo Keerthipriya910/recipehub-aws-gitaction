@@ -1,4 +1,4 @@
-name: Deploy Foodrecipe App on EC2 (No Docker)
+name: Deploy RecipeHub
 
 on:
   push:
@@ -11,18 +11,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
-
-      - name: Copy files to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "./*"
-          target: /home/ubuntu/foodrecipe
-
       - name: SSH into EC2 and deploy
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -31,17 +19,40 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script_stop: true
           script: |
+            set -e
+
+            echo ">>> Ensuring deployment directory exists..."
+            mkdir -p ~/foodrecipe
             cd ~/foodrecipe
+
+            # Pull Backend
+            if [ ! -d "backend" ]; then
+              git clone https://github.com/Keerthipriya910/recipehub-aws-backend.git backend
+            else
+              cd backend
+              git pull
+              cd ..
+            fi
+
+            # Pull Frontend
+            if [ ! -d "frontend" ]; then
+              git clone https://github.com/Keerthipriya910/recipehub-aws-frontend.git frontend
+            else
+              cd frontend
+              git pull
+              cd ..
+            fi
 
             echo ">>> Installing dependencies..."
             sudo apt-get update -y
-            sudo apt-get install -y openjdk-17-jdk maven mysql-client nodejs npm nginx
+            sudo apt-get install -y openjdk-17-jdk maven mysql-client nodejs npm nginx git
 
             echo ">>> Building backend..."
             cd backend
             mvn clean package -DskipTests
 
             echo ">>> Restarting backend..."
+            pkill -f 'java -jar' || true
             nohup java -jar target/*-SNAPSHOT.jar > backend.log 2>&1 &
 
             echo ">>> Building frontend..."
