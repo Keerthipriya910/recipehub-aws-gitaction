@@ -21,27 +21,27 @@ jobs:
           script: |
             set -e
 
-            echo ">>> Ensuring deployment directory exists..."
-            mkdir -p ~/foodrecipe
-            cd ~/foodrecipe
+            echo ">>> Ensuring deployment directories exist..."
+            mkdir -p ~/foodrecipe/backend
+            mkdir -p ~/foodrecipe/frontend
 
             echo ">>> Installing required packages..."
             sudo apt-get update -y
             sudo apt-get install -y git openjdk-17-jdk maven mysql-client nodejs npm nginx
 
             # --- Backend ---
-            if [ ! -d "backend" ]; then
+            BACKEND_DIR=~/foodrecipe/backend
+            if [ ! -d "$BACKEND_DIR/.git" ]; then
               echo ">>> Cloning backend repo..."
-              git clone https://github.com/Keerthipriya910/recipehub-aws-backend.git backend
+              git clone https://github.com/Keerthipriya910/recipehub-aws-backend.git "$BACKEND_DIR"
             else
               echo ">>> Pulling latest backend changes..."
-              cd backend
-              git pull
-              cd ..
+              cd "$BACKEND_DIR"
+              git pull || true
             fi
 
             echo ">>> Building backend..."
-            cd backend
+            cd "$BACKEND_DIR"
             mvn clean package -DskipTests
 
             echo ">>> Restarting backend..."
@@ -49,18 +49,18 @@ jobs:
             nohup java -jar target/*-SNAPSHOT.jar > backend.log 2>&1 &
 
             # --- Frontend ---
-            if [ ! -d "../frontend" ]; then
+            FRONTEND_DIR=~/foodrecipe/frontend
+            if [ ! -d "$FRONTEND_DIR/.git" ]; then
               echo ">>> Cloning frontend repo..."
-              git clone https://github.com/Keerthipriya910/recipehub-aws-frontend.git frontend
+              git clone https://github.com/Keerthipriya910/recipehub-aws-frontend.git "$FRONTEND_DIR"
             else
               echo ">>> Pulling latest frontend changes..."
-              cd ../frontend
-              git pull
-              cd ../backend  # Go back to deployment root
+              cd "$FRONTEND_DIR"
+              git pull || true
             fi
 
             echo ">>> Building frontend..."
-            cd ../frontend
+            cd "$FRONTEND_DIR"
             npm install
             npm run build
 
