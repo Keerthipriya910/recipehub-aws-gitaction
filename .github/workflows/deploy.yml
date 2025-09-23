@@ -25,27 +25,20 @@ jobs:
             mkdir -p ~/foodrecipe
             cd ~/foodrecipe
 
-            # Pull Backend
+            echo ">>> Installing required packages..."
+            sudo apt-get update -y
+            sudo apt-get install -y git openjdk-17-jdk maven mysql-client nodejs npm nginx
+
+            # --- Backend ---
             if [ ! -d "backend" ]; then
+              echo ">>> Cloning backend repo..."
               git clone https://github.com/Keerthipriya910/recipehub-aws-backend.git backend
             else
+              echo ">>> Pulling latest backend changes..."
               cd backend
               git pull
               cd ..
             fi
-
-            # Pull Frontend
-            if [ ! -d "frontend" ]; then
-              git clone https://github.com/Keerthipriya910/recipehub-aws-frontend.git frontend
-            else
-              cd frontend
-              git pull
-              cd ..
-            fi
-
-            echo ">>> Installing dependencies..."
-            sudo apt-get update -y
-            sudo apt-get install -y openjdk-17-jdk maven mysql-client nodejs npm nginx git
 
             echo ">>> Building backend..."
             cd backend
@@ -54,6 +47,17 @@ jobs:
             echo ">>> Restarting backend..."
             pkill -f 'java -jar' || true
             nohup java -jar target/*-SNAPSHOT.jar > backend.log 2>&1 &
+
+            # --- Frontend ---
+            if [ ! -d "../frontend" ]; then
+              echo ">>> Cloning frontend repo..."
+              git clone https://github.com/Keerthipriya910/recipehub-aws-frontend.git frontend
+            else
+              echo ">>> Pulling latest frontend changes..."
+              cd ../frontend
+              git pull
+              cd ../backend  # Go back to deployment root
+            fi
 
             echo ">>> Building frontend..."
             cd ../frontend
